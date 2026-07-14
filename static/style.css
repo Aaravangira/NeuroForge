@@ -1,0 +1,219 @@
+/* ==========================================
+   AI Invoice Extractor
+   Premium UI
+========================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;
+}
+
+body{
+
+    background:linear-gradient(
+        135deg,
+        #f5f7fa,
+        #d7e1ec
+    );
+
+    min-height:100vh;
+}
+
+/* =======================
+Navbar
+======================= */
+
+.navbar{
+
+    background:linear-gradient(
+        90deg,
+        #0062ff,
+        #00b4ff
+    ) !important;
+}
+
+/* =======================
+Cards
+======================= */
+
+.card{
+
+    border:none;
+
+    border-radius:18px;
+
+    overflow:hidden;
+
+    transition:.3s;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.12);
+
+}
+
+.card:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:0 20px 40px rgba(0,0,0,.18);
+
+}
+
+/* =======================
+Headers
+======================= */
+
+.card-header{
+
+    font-size:18px;
+
+    font-weight:700;
+
+}
+
+/* =======================
+Buttons
+======================= */
+
+.btn{
+
+    border-radius:10px;
+
+    font-weight:600;
+
+    transition:.3s;
+
+}
+
+.btn:hover{
+
+    transform:scale(1.03);
+
+}
+
+/* =======================
+Upload
+======================= */
+
+input[type=file]{
+
+    padding:15px;
+
+}
+
+/* =======================
+Result
+======================= */
+
+#result{
+
+    background:#111827;
+
+    color:#00ff88;
+
+    padding:20px;
+
+    border-radius:10px;
+
+    min-height:250px;
+
+    overflow:auto;
+
+    font-size:14px;
+
+}
+
+/* =======================
+Dashboard
+======================= */
+
+#invoiceCount{
+
+    color:#0066ff;
+
+    font-weight:bold;
+
+    font-size:48px;
+
+}
+
+#totalAmount{
+
+    color:#00aa55;
+
+    font-weight:bold;
+
+    font-size:40px;
+
+}
+
+/* =======================
+Table
+======================= */
+
+.table{
+
+    background:white;
+
+}
+
+.table thead{
+
+    position:sticky;
+
+    top:0;
+
+}
+
+/* =======================
+Loading
+======================= */
+
+#loading{
+
+    font-size:18px;
+
+    font-weight:bold;
+
+    color:#0062ff;
+
+}
+
+/* =======================
+Footer
+======================= */
+
+footer{
+
+    padding:25px;
+
+    color:#666;
+
+}
+
+/* =======================
+Responsive
+======================= */
+
+@media(max-width:768px){
+
+    .card{
+
+        margin-bottom:20px;
+
+    }
+
+    #invoiceCount{
+
+        font-size:36px;
+
+    }
+
+    #totalAmount{
+
+        font-size:30px;
+
+    }
+
+}
