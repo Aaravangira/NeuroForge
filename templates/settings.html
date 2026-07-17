@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block page_title %}
+Settings
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="row">
+
+        <!-- Company -->
+
+        <div class="col-lg-6 mb-4">
+
+            <div class="dashboard-card">
+
+                <h5 class="mb-4">
+
+                    Company Information
+
+                </h5>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        Company Name
+
+                    </label>
+
+                    <input
+                        class="form-control"
+                        type="text"
+                        placeholder="ABC & Co.">
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        GST Number
+
+                    </label>
+
+                    <input
+                        class="form-control"
+                        type="text">
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        Address
+
+                    </label>
+
+                    <textarea
+                        class="form-control"
+                        rows="4"></textarea>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- AI -->
+
+        <div class="col-lg-6 mb-4">
+
+            <div class="dashboard-card">
+
+                <h5 class="mb-4">
+
+                    AI Configuration
+
+                </h5>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        AI Model
+
+                    </label>
+
+                    <select class="form-select">
+
+                        <option>
+
+                            Qwen
+
+                        </option>
+
+                        <option>
+
+                            OpenAI
+
+                        </option>
+
+                        <option>
+
+                            Gemini
+
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        OCR Engine
+
+                    </label>
+
+                    <select class="form-select">
+
+                        <option>
+
+                            PaddleOCR
+
+                        </option>
+
+                        <option>
+
+                            Tesseract
+
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="form-check form-switch mt-4">
+
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        checked>
+
+                    <label class="form-check-label">
+
+                        Enable AI Validation
+
+                    </label>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="dashboard-card">
+
+        <div class="d-flex justify-content-between align-items-center">
+
+            <h5>
+
+                Application
+
+            </h5>
+
+            <button class="btn btn-primary">
+
+                Save Settings
+
+            </button>
+
+        </div>
+
+        <hr>
+
+        <div class="row">
+
+            <div class="col-lg-4">
+
+                <div class="summary-card">
+
+                    <h6>
+
+                        Version
+
+                    </h6>
+
+                    <h3>
+
+                        2.0
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+            <div class="col-lg-4">
+
+                <div class="summary-card">
+
+                    <h6>
+
+                        Database
+
+                    </h6>
+
+                    <h3>
+
+                        SQLite
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+            <div class="col-lg-4">
+
+                <div class="summary-card">
+
+                    <h6>
+
+                        Status
+
+                    </h6>
+
+                    <h3 class="summary-success">
+
+                        Online
+
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

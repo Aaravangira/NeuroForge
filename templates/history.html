@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice History{% endblock %}
+
+{% block page_title %}
+
+Invoice History
+
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- Filters -->
+
+    <div class="dashboard-card mb-4">
+
+        <div class="row g-3">
+
+            <div class="col-lg-4">
+
+                <input
+                    id="searchBox"
+                    class="form-control"
+                    type="text"
+                    placeholder="Search Vendor, Invoice No...">
+
+            </div>
+
+            <div class="col-lg-3">
+
+                <input
+                    class="form-control"
+                    type="date">
+
+            </div>
+
+            <div class="col-lg-3">
+
+                <select class="form-select">
+
+                    <option>
+
+                        All Status
+
+                    </option>
+
+                    <option>
+
+                        Processed
+
+                    </option>
+
+                    <option>
+
+                        Pending
+
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-lg-2">
+
+                <button
+                    id="refreshBtn"
+                    class="btn btn-primary w-100">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+
+                    Refresh
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Table -->
+
+    <div class="dashboard-card">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+
+            <h5>
+
+                All Invoices
+
+            </h5>
+
+            <a
+                href="/download-excel"
+                class="btn btn-success">
+
+                <i class="bi bi-file-earmark-excel"></i>
+
+                Export Excel
+
+            </a>
+
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Vendor</th>
+
+                        <th>Invoice</th>
+
+                        <th>Date</th>
+
+                        <th>Total</th>
+
+                        <th>Status</th>
+
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="historyTable">
+
+                    <tr>
+
+                        <td colspan="7"
+                            class="text-center text-muted">
+
+                            Loading...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="/static/js/history.js"></script>
+
+{% endblock %}

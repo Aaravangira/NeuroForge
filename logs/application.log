@@ -527,3 +527,56 @@ NameError: name 'SYSTEM_PROMPT' is not defined. Did you mean: 'SSYSTEM_PROMPT'?
 2026-07-13 16:54:05 | INFO     | invoice_service.py:108 | Invoice Saved Successfully : 28
 2026-07-13 16:54:05 | INFO     | excel_export.py:146 | Excel Exported : /Users/aaravsharma/Ai_Invoice_Extractor/exports/invoice.xlsx
 2026-07-13 16:54:05 | INFO     | background_tasks.py:60 | Background Processing Completed : OD223726052458816000 (1).pdf
+2026-07-15 12:11:15 | INFO     | logger.py:75 | ============================================================
+2026-07-15 12:11:15 | INFO     | logger.py:76 | AI Invoice Extractor Logger Started
+2026-07-15 12:11:15 | INFO     | logger.py:77 | ============================================================
+2026-07-15 12:11:17 | INFO     | ai_engine.py:88 | Loading Qwen Model...
+2026-07-15 12:11:21 | INFO     | ai_engine.py:103 | Qwen Model Loaded Successfully
+2026-07-15 12:11:22 | INFO     | database.py:75 | Database table ready.
+2026-07-15 12:11:22 | INFO     | app.py:95 | Database Connected
+2026-07-15 12:59:21 | INFO     | app.py:99 | Application Closed
+2026-07-15 12:59:25 | INFO     | logger.py:75 | ============================================================
+2026-07-15 12:59:25 | INFO     | logger.py:76 | AI Invoice Extractor Logger Started
+2026-07-15 12:59:25 | INFO     | logger.py:77 | ============================================================
+2026-07-15 12:59:26 | INFO     | ai_engine.py:88 | Loading Qwen Model...
+2026-07-15 12:59:30 | INFO     | ai_engine.py:103 | Qwen Model Loaded Successfully
+2026-07-15 12:59:30 | INFO     | database.py:75 | Database table ready.
+2026-07-15 12:59:30 | INFO     | app.py:95 | Database Connected
+2026-07-15 14:53:31 | INFO     | app.py:282 | Uploaded : Ventures 031294.pdf
+2026-07-15 14:53:31 | INFO     | app.py:302 | Running OCR...
+2026-07-15 14:53:33 | INFO     | ocr_engine.py:137 | PDF OCR Completed
+2026-07-15 14:53:33 | INFO     | invoice_service.py:73 | Processing : Ventures 031294.pdf
+2026-07-15 14:54:00 | INFO     | ai_engine.py:157 | AI Extraction Successful
+2026-07-15 14:54:00 | INFO     | invoice_service.py:83 | AI Processing Completed
+2026-07-15 14:54:00 | INFO     | database.py:150 | Invoice Saved : 29
+2026-07-15 14:54:00 | INFO     | invoice_service.py:108 | Invoice Saved Successfully : 29
+2026-07-15 14:54:00 | INFO     | excel_export.py:146 | Excel Exported : /Users/aaravsharma/Ai_Invoice_Extractor/exports/invoice.xlsx
+2026-07-15 14:54:00 | INFO     | app.py:390 | Upload Completed
+2026-07-15 14:54:00 | INFO     | background_tasks.py:33 | Background Processing Started : Ventures 031294.pdf
+2026-07-15 14:54:00 | INFO     | invoice_service.py:73 | Processing : Ventures 031294.pdf
+2026-07-15 14:54:24 | INFO     | ai_engine.py:157 | AI Extraction Successful
+2026-07-15 14:54:24 | INFO     | invoice_service.py:83 | AI Processing Completed
+2026-07-15 14:54:24 | INFO     | database.py:150 | Invoice Saved : 30
+2026-07-15 14:54:24 | INFO     | invoice_service.py:108 | Invoice Saved Successfully : 30
+2026-07-15 14:54:24 | INFO     | excel_export.py:146 | Excel Exported : /Users/aaravsharma/Ai_Invoice_Extractor/exports/invoice.xlsx
+2026-07-15 14:54:24 | INFO     | background_tasks.py:60 | Background Processing Completed : Ventures 031294.pdf
+2026-07-16 16:44:29 | INFO     | logger.py:75 | ============================================================
+2026-07-16 16:44:29 | INFO     | logger.py:76 | AI Invoice Extractor Logger Started
+2026-07-16 16:44:29 | INFO     | logger.py:77 | ============================================================
+2026-07-16 16:44:32 | INFO     | ai_engine.py:88 | Loading Qwen Model...
+2026-07-16 16:44:37 | INFO     | ai_engine.py:103 | Qwen Model Loaded Successfully
+2026-07-16 16:44:37 | INFO     | database.py:75 | Database table ready.
+2026-07-16 16:44:37 | INFO     | app.py:95 | Database Connected
+2026-07-17 12:23:19 | INFO     | logger.py:75 | ============================================================
+2026-07-17 12:23:19 | INFO     | logger.py:76 | AI Invoice Extractor Logger Started
+2026-07-17 12:23:19 | INFO     | logger.py:77 | ============================================================
+2026-07-17 12:23:20 | INFO     | ai_engine.py:88 | Loading Qwen Model...
+2026-07-17 12:23:25 | INFO     | ai_engine.py:103 | Qwen Model Loaded Successfully
+2026-07-17 12:23:25 | INFO     | database.py:75 | Database table ready.
+2026-07-17 12:23:25 | INFO     | app.py:95 | Database Connected
+2026-07-17 12:23:45 | INFO     | database.py:286 | Invoice Deleted : 30
+2026-07-17 12:23:47 | INFO     | database.py:286 | Invoice Deleted : 29
+2026-07-17 12:24:03 | INFO     | database.py:286 | Invoice Deleted : 28
+2026-07-17 12:24:10 | INFO     | database.py:286 | Invoice Deleted : 27
+2026-07-17 12:24:12 | INFO     | database.py:286 | Invoice Deleted : 26
+2026-07-17 12:24:15 | INFO     | database.py:286 | Invoice Deleted : 25

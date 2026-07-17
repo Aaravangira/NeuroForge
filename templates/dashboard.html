@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}
+Dashboard
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <!-- Statistics -->
+
+    <div class="row g-4">
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="stat-card">
+
+                <div class="stat-icon bg-primary">
+
+                    <i class="bi bi-file-earmark-text"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="stat-title">
+
+                        Total Invoices
+
+                    </p>
+
+                    <h2 id="invoiceCount">
+
+                        0
+
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="stat-card">
+
+                <div class="stat-icon bg-success">
+
+                    <i class="bi bi-currency-rupee"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="stat-title">
+
+                        Total Amount
+
+                    </p>
+
+                    <h2 id="totalAmount">
+
+                        ₹0
+
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="stat-card">
+
+                <div class="stat-icon bg-warning">
+
+                    <i class="bi bi-lightning-charge"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="stat-title">
+
+                        Avg Processing
+
+                    </p>
+
+                    <h2>
+
+                        2.3s
+
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+
+            <div class="stat-card">
+
+                <div class="stat-icon bg-info">
+
+                    <i class="bi bi-patch-check"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="stat-title">
+
+                        AI Accuracy
+
+                    </p>
+
+                    <h2>
+
+                        98%
+
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Second Row -->
+
+    <div class="row mt-4">
+
+        <!-- Chart -->
+
+        <div class="col-lg-8">
+
+            <div class="dashboard-card">
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+
+                    <h5>
+
+                        Invoice Analytics
+
+                    </h5>
+
+                    <button class="btn btn-outline-primary">
+
+                        View Report
+
+                    </button>
+
+                </div>
+
+                <div id="chartArea">
+
+                    <div class="empty-placeholder">
+
+                        Chart will be added in next phase
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Quick Actions -->
+
+        <div class="col-lg-4">
+
+            <div class="dashboard-card">
+
+                <h5 class="mb-4">
+
+                    Quick Actions
+
+                </h5>
+
+                <a href="/upload-page"
+
+                   class="btn btn-primary w-100 mb-3">
+
+                    <i class="bi bi-upload me-2"></i>
+
+                    Upload Invoice
+
+                </a>
+
+                <a href="/history-page"
+
+                   class="btn btn-light w-100 mb-3">
+
+                    <i class="bi bi-clock-history me-2"></i>
+
+                    Invoice History
+
+                </a>
+
+                <a href="/reports"
+
+                   class="btn btn-light w-100">
+
+                    <i class="bi bi-bar-chart me-2"></i>
+
+                    Reports
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Recent Activity -->
+
+    <div class="row mt-4">
+
+        <div class="col-12">
+
+            <div class="dashboard-card">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <h5>
+
+                        Recent Activity
+
+                    </h5>
+
+                    <button class="btn btn-sm btn-outline-primary">
+
+                        Refresh
+
+                    </button>
+
+                </div>
+
+                <hr>
+
+                <table class="table modern-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Vendor</th>
+
+                            <th>Invoice</th>
+
+                            <th>Date</th>
+
+                            <th>Amount</th>
+
+                            <th>Status</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+
+                            <td colspan="5"
+                                class="text-center text-muted">
+
+                                No invoices yet
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
