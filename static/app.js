@@ -1,7 +1,3 @@
-/* ==========================================
-   AI Invoice Extractor
-========================================== */
-
 const uploadForm = document.getElementById("uploadForm");
 const loading = document.getElementById("loading");
 const result = document.getElementById("result");
@@ -12,6 +8,7 @@ const totalAmount = document.getElementById("totalAmount");
 const historyTable = document.getElementById("historyTable");
 const searchBox = document.getElementById("searchBox");
 const refreshBtn = document.getElementById("refreshBtn");
+
 
 // ======================================
 // Upload Invoice
@@ -29,62 +26,68 @@ uploadForm.addEventListener("submit", async function (e) {
     }
 
     loading.style.display = "block";
-
     result.textContent = "";
 
     const formData = new FormData();
-
     formData.append("file", file);
 
     try {
 
-        const response = await fetch("/upload", {
-
+        const response = await fetch("/upload/", {
             method: "POST",
-
             body: formData
-
         });
 
         const data = await response.json();
 
         loading.style.display = "none";
 
-        if (!data.success) {
+        if (!response.ok || !data.success) {
 
-            alert(data.message);
+            alert(
+                data.detail ||
+                data.message ||
+                "Invoice upload failed."
+            );
 
             return;
+        }
 
+        // Backend currently returns `invoice`
+        const document = data.invoice || data.document;
+
+        if (!document) {
+            throw new Error(
+                "Upload succeeded but invoice data was not returned."
+            );
         }
 
         result.textContent = JSON.stringify(
-
-            data.document,
-
+            document,
             null,
-
             4
-
         );
 
-        loadDashboard();
+        await loadDashboard();
+        await loadHistory();
 
-        loadHistory();
-
-    }
-
-    catch (err) {
+    } catch (err) {
 
         loading.style.display = "none";
 
-        alert("Upload Failed");
+        console.error(
+            "Upload error:",
+            err
+        );
 
-        console.error(err);
-
+        alert(
+            err.message ||
+            "Upload Failed"
+        );
     }
 
 });
+
 
 // ======================================
 // Dashboard
@@ -92,15 +95,43 @@ uploadForm.addEventListener("submit", async function (e) {
 
 async function loadDashboard() {
 
-    const response = await fetch("/dashboard");
+    try {
 
-    const data = await response.json();
+        const response = await fetch("/dashboard");
 
-    invoiceCount.innerHTML = data.total_invoices;
+        if (!response.ok) {
+            throw new Error(
+                "Dashboard request failed."
+            );
+        }
 
-    totalAmount.innerHTML = "₹ " + data.total_amount;
+        const data = await response.json();
 
+        invoiceCount.innerHTML =
+            data.total_invoices ??
+            data.count ??
+            0;
+
+        totalAmount.innerHTML =
+            "₹ " +
+            (
+                data.total_amount ??
+                data.totalAmount ??
+                0
+            );
+
+    } catch (err) {
+
+        console.error(
+            "Dashboard error:",
+            err
+        );
+
+        invoiceCount.innerHTML = "0";
+        totalAmount.innerHTML = "₹ 0";
+    }
 }
+
 
 // ======================================
 // History
@@ -108,148 +139,44 @@ async function loadDashboard() {
 
 async function loadHistory() {
 
-    const response = await fetch("/history");
+    try {
 
-    const data = await response.json();
+        const response = await fetch("/history");
 
-    historyTable.innerHTML = "";
+        if (!response.ok) {
+            throw new Error(
+                "History request failed."
+            );
+        }
 
-    data.data.forEach(invoice => {
+        const data = await response.json();
 
-        historyTable.innerHTML += `
+        historyTable.innerHTML = "";
 
-<tr>
+        const invoices =
+            Array.isArray(data)
+                ? data
+                : data.data || [];
 
-<td>${invoice.id}</td>
+        invoices.forEach(invoice => {
 
-<td>${invoice.vendor_name}</td>
+            historyTable.innerHTML += `
+                <tr>
+                    <td>${invoice.id ?? ""}</td>
+                    <td>${invoice.vendor_name ?? ""}</td>
+                    <td>${invoice.document_number ?? invoice.invoice_number ?? ""}</td>
+                    <td>${invoice.document_date ?? invoice.invoice_date ?? ""}</td>
+                    <td>${invoice.grand_total ?? ""}</td>
+                </tr>
+            `;
 
-<td>${invoice.invoice_number}</td>
+        });
 
-<td>${invoice.invoice_date}</td>
+    } catch (err) {
 
-<td>${invoice.grand_total}</td>
-
-<td>
-
-<button
-class="btn btn-danger btn-sm"
-onclick="deleteInvoice(${invoice.id})">
-
-Delete
-
-</button>
-
-</td>
-
-</tr>
-
-`;
-
-    });
-
-}
-
-// ======================================
-// Delete
-// ======================================
-
-async function deleteInvoice(id){
-
-    if(!confirm("Delete Invoice?"))
-
-        return;
-
-    await fetch("/invoice/"+id,{
-
-        method:"DELETE"
-
-    });
-
-    loadHistory();
-
-    loadDashboard();
-
-}
-
-// ======================================
-// Search
-// ======================================
-
-searchBox.addEventListener("keyup", async function(){
-
-    const keyword = this.value;
-
-    if(keyword===""){
-
-        loadHistory();
-
-        return;
-
+        console.error(
+            "History error:",
+            err
+        );
     }
-
-    const response = await fetch(
-
-        "/search?keyword="+encodeURIComponent(keyword)
-
-    );
-
-    const data = await response.json();
-
-    historyTable.innerHTML="";
-
-    data.data.forEach(invoice=>{
-
-historyTable.innerHTML += `
-
-<tr>
-
-<td>${invoice.id}</td>
-
-<td>${invoice.vendor_name}</td>
-
-<td>${invoice.invoice_number}</td>
-
-<td>${invoice.invoice_date}</td>
-
-<td>${invoice.grand_total}</td>
-
-<td>
-
-<button
-class="btn btn-danger btn-sm"
-onclick="deleteInvoice(${invoice.id})">
-
-Delete
-
-</button>
-
-</td>
-
-</tr>
-
-`;
-
-    });
-
-});
-
-// ======================================
-// Refresh
-// ======================================
-
-refreshBtn.addEventListener("click",function(){
-
-    loadDashboard();
-
-    loadHistory();
-
-});
-
-// ======================================
-// Initial Load
-// ======================================
-
-loadDashboard();
-
-loadHistory();
+}

@@ -1,682 +1,676 @@
 """
-==========================================
-AI Invoice Extractor
+==========================================================
+AI INVOICE EXTRACTOR
 FastAPI Application
-==========================================
+Production Configuration-Driven Version
+==========================================================
 """
 
-import os
-import shutil
-from contextlib import asynccontextmanager
+from __future__ import annotations
 
-import fitz
+from contextlib import asynccontextmanager
+from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from fastapi import (
     FastAPI,
+    HTTPException,
     Request,
-    UploadFile,
-    File,
-    BackgroundTasks
 )
-
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import (
+    FileResponse,
     HTMLResponse,
     JSONResponse,
-    FileResponse
 )
-
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
-from dotenv import load_dotenv
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
 from config import (
     APP_NAME,
     APP_VERSION,
-    UPLOAD_FOLDER,
     EXPORT_FOLDER,
+    EXCEL_FILENAME,
     STATIC_FOLDER,
     TEMPLATE_FOLDER,
-    EXCEL_FILENAME
 )
-
-from logger import logger
-
 from database import (
-    create_table,
-    get_all_invoices,
-    get_invoice,
-    search_invoice,
-    delete_invoice
+    db_manager,
 )
-
-from ocr_engine import (
-    image_to_text,
-    pdf_to_text_with_ocr
+from logger import logger
+from repositories.repositories.invoice_repository import (
+    invoice_repository,
 )
+from api.upload import router as upload_router
+from api.invoice import router as invoice_router
+from models.invoice_model import Invoice
+from models.user_model import User
 
-from invoice_service import (
-    process_document,
-    save_document
-)
 
-from excel_export import (
-    export_to_excel
-)
+# ==========================================================
+# APPLICATION PATHS
+# ==========================================================
 
-from background_tasks import (
-    process_invoice
-)
-
-# ==========================================
-# LOAD ENVIRONMENT
-# ==========================================
-
-load_dotenv()
-
-# ==========================================
-# CREATE REQUIRED FOLDERS
-# ==========================================
-
-UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
-EXPORT_FOLDER.mkdir(parents=True, exist_ok=True)
 STATIC_FOLDER.mkdir(parents=True, exist_ok=True)
 TEMPLATE_FOLDER.mkdir(parents=True, exist_ok=True)
+EXPORT_FOLDER.mkdir(parents=True, exist_ok=True)
 
-# ==========================================
-# FASTAPI LIFESPAN
-# ==========================================
+
+# ==========================================================
+# STARTUP / SHUTDOWN
+# ==========================================================
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Application lifecycle.
 
-    create_table()
+    Database initialization is performed once at startup.
+    """
 
-    logger.info("Database Connected")
+    logger.info("=" * 60)
+    logger.info("AI Invoice Extractor Starting...")
+    logger.info("=" * 60)
+
+    try:
+        db_manager.create_tables()
+        logger.info("Database initialization completed.")
+        logger.info("Application startup completed successfully.")
+    except Exception:
+        logger.exception("Application startup failed.")
+        raise
 
     yield
 
-    logger.info("Application Closed")
-
-# ==========================================
-# FASTAPI APP
-# ==========================================
-
-app = FastAPI(
-
-    title=APP_NAME,
-
-    version=APP_VERSION,
-
-    lifespan=lifespan
-
-)
-
-# ==========================================
-# TEMPLATE
-# ==========================================
-
-templates = Jinja2Templates(
-
-    directory=str(TEMPLATE_FOLDER)
-
-)
-
-# ==========================================
-# STATIC
-# ==========================================
-
-app.mount(
-
-    "/static",
-
-    StaticFiles(directory=str(STATIC_FOLDER)),
-
-    name="static"
-
-)
-
-# ==========================================
-# READ PDF
-# ==========================================
-
-def read_pdf(pdf_path: str):
-
-    text = ""
-
-    pdf = fitz.open(pdf_path)
-
-    for page in pdf:
-
-        text += page.get_text()
-
-    pdf.close()
-
-    return text
-
-# ==========================================
-# HOME PAGE
-# ==========================================
-
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "request": request
-        }
-    )
-
-# ==========================================
-# HEALTH CHECK
-# ==========================================
-
-@app.get("/health")
-
-def health():
-
-    return {
-
-        "success": True,
-
-        "status": "Running",
-
-        "application": APP_NAME,
-
-        "version": APP_VERSION
-
-    }
-# ==========================================
-# UPLOAD DOCUMENT
-# ==========================================
-
-@app.post("/upload")
-async def upload_document(
-
-    background_tasks: BackgroundTasks,
-
-    file: UploadFile = File(...)
-
-):
+    logger.info("AI Invoice Extractor shutting down.")
 
     try:
+        from database import close_database
 
-        # ----------------------------------
-        # Validate File
-        # ----------------------------------
+        close_database()
 
-        if file.filename == "":
+    except Exception:
+        logger.exception("Database shutdown failed.")
 
-            return JSONResponse(
 
-                status_code=400,
+# ==========================================================
+# FASTAPI APPLICATION
+# ==========================================================
 
-                content={
+app = FastAPI(
+    title=APP_NAME,
+    version=APP_VERSION,
+    description="AI-powered invoice extraction service.",
+    lifespan=lifespan,
+)
 
-                    "success": False,
 
-                    "message": "No file selected."
+# ==========================================================
+# MIDDLEWARE
+# ==========================================================
 
-                }
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1000,
+)
+
+
+# ==========================================================
+# STATIC FILES
+# ==========================================================
+
+app.mount(
+    "/static",
+    StaticFiles(
+        directory=str(STATIC_FOLDER)
+    ),
+    name="static",
+)
+
+
+# ==========================================================
+# TEMPLATES
+# ==========================================================
+
+templates = Jinja2Templates(
+    directory=str(TEMPLATE_FOLDER)
+)
+
+
+# ==========================================================
+# ROUTERS
+# ==========================================================
+
+app.include_router(
+    upload_router
+)
+
+app.include_router(
+    invoice_router
+)
+
+
+# ==========================================================
+# DASHBOARD HELPERS
+# ==========================================================
+
+def _safe_decimal(value: Any) -> Decimal:
+    """
+    Convert a numeric value safely to Decimal.
+    Invalid or empty values become zero.
+    """
+
+    if value is None:
+        return Decimal("0")
+
+    if isinstance(value, Decimal):
+        return value
+
+    try:
+        text = str(value).strip().replace(",", "")
+
+        if not text:
+            return Decimal("0")
+
+        return Decimal(text)
+
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0")
+
+
+def get_dashboard_data() -> dict[str, Any]:
+    """
+    Build dashboard statistics from persisted invoices.
+
+    Database access remains behind InvoiceRepository.
+    """
+
+    invoices = invoice_repository.get_all()
+
+    total_invoices = len(invoices)
+
+    total_amount = sum(
+        (
+            _safe_decimal(
+                invoice.get("grand_total")
             )
+            for invoice in invoices
+        ),
+        Decimal("0"),
+    )
+
+    return {
+        "total_invoices": total_invoices,
+        "total_amount": float(
+            total_amount
+        ),
+    }
+
+
+# ==========================================================
+# HOME PAGE
+# ==========================================================
+
+@app.get(
+    "/",
+    response_class=HTMLResponse,
+)
+async def home(
+    request: Request,
+):
+    """
+    Render the invoice upload page.
+    """
+
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+        },
+    )
+
+
+# ==========================================================
+# DASHBOARD PAGE
+# ==========================================================
+
+@app.get(
+    "/dashboard",
+    response_class=HTMLResponse,
+)
+async def dashboard(
+    request: Request,
+):
+    """
+    Render the dashboard page.
+    """
+
+    dashboard_data = get_dashboard_data()
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "dashboard": dashboard_data,
+        },
+    )
+
+
+# ==========================================================
+# DASHBOARD API
+# ==========================================================
+
+@app.get(
+    "/api/dashboard"
+)
+async def dashboard_api() -> dict[str, Any]:
+    """
+    Return dashboard statistics as JSON.
+    """
+
+    return {
+        "success": True,
+        "data": get_dashboard_data(),
+    }
+
+
+# ==========================================================
+# HISTORY API
+# ==========================================================
+
+@app.get(
+    "/api/history"
+)
+async def history_api() -> dict[str, Any]:
+    """
+    Return invoice history as JSON.
+    """
+
+    invoices = invoice_repository.get_all()
+
+    return {
+        "success": True,
+        "count": len(invoices),
+        "data": invoices,
+    }
+
+
+# ==========================================================
+# BACKWARD-COMPATIBLE HISTORY ROUTE
+# ==========================================================
 
-        extension = os.path.splitext(
+@app.get(
+    "/history"
+)
+async def history_compatibility() -> dict[str, Any]:
+    """
+    Backward-compatible history endpoint.
 
-            file.filename
+    Existing frontend clients can continue using /history.
+    """
 
-        )[1].lower()
+    return await history_api()
 
-        allowed = {
 
-            ".pdf",
+# ==========================================================
+# BACKWARD-COMPATIBLE DASHBOARD JSON ROUTE
+# ==========================================================
 
-            ".png",
+@app.get(
+    "/dashboard/data"
+)
+async def dashboard_data_compatibility() -> dict[str, Any]:
+    """
+    Backward-compatible dashboard data endpoint.
+    """
 
-            ".jpg",
+    return await dashboard_api()
 
-            ".jpeg"
 
-        }
+# ==========================================================
+# EXCEL DOWNLOAD
+# ==========================================================
 
-        if extension not in allowed:
+@app.get(
+    "/download/excel"
+)
+async def download_excel():
+    """
+    Download the configured Excel export.
+    """
 
-            return JSONResponse(
+    excel_path = (
+        EXPORT_FOLDER
+        /
+        EXCEL_FILENAME
+    )
 
-                status_code=400,
-
-                content={
-
-                    "success": False,
-
-                    "message": "Unsupported file format."
-
-                }
-
-            )
-
-        # ----------------------------------
-        # Save Upload
-        # ----------------------------------
-
-        filepath = UPLOAD_FOLDER / file.filename
-
-        with open(
-
-            filepath,
-
-            "wb"
-
-        ) as buffer:
-
-            shutil.copyfileobj(
-
-                file.file,
-
-                buffer
-
-            )
-
-        logger.info(
-
-            f"Uploaded : {file.filename}"
-
-        )
-
-        # ----------------------------------
-        # OCR
-        # ----------------------------------
-
-        if extension == ".pdf":
-
-            document_text = read_pdf(
-
-                str(filepath)
-
-            )
-
-            if document_text.strip() == "":
-
-                logger.info(
-
-                    "Running OCR..."
-
-                )
-
-                document_text = pdf_to_text_with_ocr(
-
-                    str(filepath)
-
-                )
-
-        else:
-
-            document_text = image_to_text(
-
-                str(filepath)
-
-            )
-
-        if document_text.strip() == "":
-
-            return JSONResponse(
-
-                status_code=400,
-
-                content={
-
-                    "success": False,
-
-                    "message": "Unable to read document."
-
-                }
-
-            )
-
-        # ----------------------------------
-        # AI Processing
-        # ----------------------------------
-
-        document = process_document(
-
-            file.filename,
-
-            document_text
-
-        )
-
-        # ----------------------------------
-        # Save Database
-        # ----------------------------------
-
-        save_document(
-
-            file.filename,
-
-            document
-
-        )
-
-        # ----------------------------------
-        # Export Excel
-        # ----------------------------------
-
-        excel_path = EXPORT_FOLDER / EXCEL_FILENAME
-
-        export_to_excel(
-
-            document,
-
-            excel_path
-
-        )
-
-        # ----------------------------------
-        # Background Processing
-        # ----------------------------------
-
-        background_tasks.add_task(
-
-            process_invoice,
-
-            file.filename,
-
-            document_text
-
-        )
-
-        logger.info(
-
-            "Upload Completed"
-
-        )
-
-        return {
-
-            "success": True,
-
-            "filename": file.filename,
-
-            "document": document,
-
-            "excel": "/download-excel"
-
-        }
-
-    except Exception as e:
-
-        logger.exception(
-
-            "Upload Error"
-
-        )
-
-        return JSONResponse(
-
-            status_code=500,
-
-            content={
-
-                "success": False,
-
-                "message": str(e)
-
-            }
-
-        )
-    # ==========================================
-# DOWNLOAD EXCEL
-# ==========================================
-
-@app.get("/download-excel")
-def download_excel():
-
-    excel_file = EXPORT_FOLDER / EXCEL_FILENAME
-
-    if not excel_file.exists():
-
+    if not excel_path.exists():
         return JSONResponse(
             status_code=404,
             content={
                 "success": False,
-                "message": "Excel file not found."
-            }
+                "message": "Excel file not found.",
+            },
         )
 
     return FileResponse(
-        path=str(excel_file),
+        path=str(excel_path),
         filename=EXCEL_FILENAME,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        media_type=(
+            "application/"
+            "vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
     )
 
 
-# ==========================================
-# HISTORY
-# ==========================================
+@app.get(
+    "/download-excel"
+)
+async def download_excel_compatibility():
+    """
+    Backward-compatible Excel download endpoint.
+    """
 
-@app.get("/history")
-def history():
+    return await download_excel()
 
-    try:
 
-        invoices = get_all_invoices()
+# ==========================================================
+# SEARCH API COMPATIBILITY
+# ==========================================================
 
-        return {
+@app.get(
+    "/search"
+)
+async def search_compatibility(
+    keyword: str,
+) -> dict[str, Any]:
+    """
+    Backward-compatible invoice search endpoint.
+    """
 
-            "success": True,
+    keyword = keyword.strip()
 
-            "count": len(invoices),
-
-            "data": invoices
-
-        }
-
-    except Exception as e:
-
-        logger.exception("History Error")
-
-        return JSONResponse(
-
-            status_code=500,
-
-            content={
-
-                "success": False,
-
-                "message": str(e)
-
-            }
-
+    if not keyword:
+        raise HTTPException(
+            status_code=400,
+            detail="Search keyword cannot be empty.",
         )
 
+    results = invoice_repository.search(
+        keyword
+    )
 
-# ==========================================
-# SEARCH
-# ==========================================
-
-@app.get("/search")
-def search(keyword: str):
-
-    try:
-
-        invoices = search_invoice(keyword)
-
-        return {
-
-            "success": True,
-
-            "count": len(invoices),
-
-            "data": invoices
-
-        }
-
-    except Exception as e:
-
-        logger.exception("Search Error")
-
-        return JSONResponse(
-
-            status_code=500,
-
-            content={
-
-                "success": False,
-
-                "message": str(e)
-
-            }
-
-        )
+    return {
+        "success": True,
+        "query": keyword,
+        "count": len(results),
+        "data": results,
+    }
 
 
-# ==========================================
-# GET SINGLE INVOICE
-# ==========================================
+# ==========================================================
+# READY CHECK
+# ==========================================================
 
-@app.get("/invoice/{invoice_id}")
-def get_single_invoice(invoice_id: int):
+@app.get(
+    "/ready"
+)
+async def readiness() -> JSONResponse:
+    """
+    Readiness endpoint for Docker/orchestrators.
+    """
 
     try:
+        from database import test_connection
 
-        invoice = get_invoice(invoice_id)
-
-        if invoice is None:
-
+        if not test_connection():
             return JSONResponse(
-
-                status_code=404,
-
+                status_code=503,
                 content={
-
-                    "success": False,
-
-                    "message": "Invoice not found."
-
-                }
-
+                    "ready": False,
+                    "database": "unavailable",
+                },
             )
 
-        return {
+        return JSONResponse(
+            status_code=200,
+            content={
+                "ready": True,
+                "database": "available",
+            },
+        )
 
-            "success": True,
-
-            "data": invoice
-
-        }
-
-    except Exception as e:
-
-        logger.exception("Invoice Error")
+    except Exception:
+        logger.exception(
+            "Readiness check failed."
+        )
 
         return JSONResponse(
-
-            status_code=500,
-
+            status_code=503,
             content={
-
-                "success": False,
-
-                "message": str(e)
-
-            }
-
+                "ready": False,
+                "database": "unavailable",
+            },
         )
 
 
-# ==========================================
-# DELETE
-# ==========================================
+# ==========================================================
+# HEALTH CHECK
+# ==========================================================
 
-@app.delete("/invoice/{invoice_id}")
-def remove_invoice(invoice_id: int):
+@app.get(
+    "/health"
+)
+async def health() -> dict[str, Any]:
+    """
+    Liveness endpoint.
+
+    This endpoint intentionally does not fail if the
+    database is temporarily unavailable.
+    """
+
+    return {
+        "status": "healthy",
+        "application": APP_NAME,
+        "version": APP_VERSION,
+    }
+
+
+# ==========================================================
+# REQUEST LOGGING
+# ==========================================================
+
+@app.middleware("http")
+async def log_requests(
+    request: Request,
+    call_next,
+):
+    """
+    Central HTTP request logging.
+    """
+
+    import time
+
+    start_time = time.perf_counter()
 
     try:
+        response = await call_next(
+            request
+        )
 
-        delete_invoice(invoice_id)
+        return response
 
-        return {
+    finally:
 
-            "success": True,
+        elapsed = (
+            time.perf_counter()
+            - start_time
+        )
 
-            "message": "Invoice deleted successfully."
-
-        }
-
-    except Exception as e:
-
-        logger.exception("Delete Error")
-
-        return JSONResponse(
-
-            status_code=500,
-
-            content={
-
-                "success": False,
-
-                "message": str(e)
-
-            }
-
+        logger.info(
+            "%s %s %.3fs",
+            request.method,
+            request.url.path,
+            elapsed,
         )
 
 
-# ==========================================
-# DASHBOARD
-# ==========================================
+# ==========================================================
+# SECURITY HEADERS
+# ==========================================================
 
-@app.get("/dashboard")
-def dashboard():
+@app.middleware("http")
+async def security_headers(
+    request: Request,
+    call_next,
+):
+    """
+    Add baseline browser security headers.
+    """
 
-    try:
+    response = await call_next(
+        request
+    )
 
-        invoices = get_all_invoices()
+    response.headers[
+        "X-Content-Type-Options"
+    ] = "nosniff"
 
-        total_invoices = len(invoices)
+    response.headers[
+        "X-Frame-Options"
+    ] = "DENY"
 
-        total_amount = 0.0
+    response.headers[
+        "Referrer-Policy"
+    ] = "strict-origin-when-cross-origin"
 
-        for invoice in invoices:
+    response.headers[
+        "X-XSS-Protection"
+    ] = "1; mode=block"
 
-            try:
+    return response
 
-                total_amount += float(
-                    invoice.get("grand_total") or 0
-                )
 
-            except:
+# ==========================================================
+# HTTP EXCEPTION HANDLER
+# ==========================================================
 
-                pass
+@app.exception_handler(
+    HTTPException
+)
+async def http_exception_handler(
+    request: Request,
+    exc: HTTPException,
+):
+    """
+    Return consistent API error responses.
+    """
 
-        return {
+    logger.warning(
+        "%s %s -> %s: %s",
+        request.method,
+        request.url.path,
+        exc.status_code,
+        exc.detail,
+    )
 
-            "success": True,
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": str(exc.detail),
+        },
+    )
 
-            "total_invoices": total_invoices,
 
-            "total_amount": round(total_amount, 2),
+# ==========================================================
+# REQUEST VALIDATION ERROR
+# ==========================================================
 
-            "data": invoices
+@app.exception_handler(
+    RequestValidationError
+)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+):
+    """
+    Return consistent validation responses.
+    """
 
-        }
+    logger.warning(
+        "Validation error on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
 
-    except Exception as e:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "message": "Validation failed.",
+            "errors": exc.errors(),
+        },
+    )
 
-        logger.exception("Dashboard Error")
 
-        return JSONResponse(
+# ==========================================================
+# GLOBAL EXCEPTION HANDLER
+# ==========================================================
 
-            status_code=500,
+@app.exception_handler(
+    Exception
+)
+async def global_exception_handler(
+    request: Request,
+    exc: Exception,
+):
+    """
+    Never expose internal exception details to clients.
+    """
 
-            content={
+    logger.exception(
+        "Unhandled application exception: %s %s",
+        request.method,
+        request.url.path,
+    )
 
-                "success": False,
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "Internal Server Error",
+        },
+    )
 
-                "message": str(e)
 
-            }
+# ==========================================================
+# APPLICATION READY
+# ==========================================================
 
-        )
+logger.info("=" * 60)
+logger.info(
+    "%s %s ready.",
+    APP_NAME,
+    APP_VERSION,
+)
+logger.info("=" * 60)
+
+
+__all__ = [
+    "app",
+    "get_dashboard_data",
+]

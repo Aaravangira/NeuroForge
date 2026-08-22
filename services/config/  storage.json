@@ -1,0 +1,36 @@
+{
+    "base_path": "storage",
+
+    "paths": {
+        "uploads": "uploads",
+        "temp": "temp",
+        "output": "output",
+        "logs": "logs"
+    },
+
+    "cleanup": {
+
+        "enabled": true,
+
+        "days": 7
+
+    },
+
+    "hash_algorithm": "sha256",
+
+    "max_file_size_mb": 50,
+
+    "allowed_extensions": [
+
+        ".pdf",
+
+        ".png",
+
+        ".jpg",
+
+        ".jpeg",
+
+        ".tiff"
+
+    ]
+}
