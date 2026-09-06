@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import shutil
+import uuid
 
 from fastapi import (
     HTTPException,
@@ -27,6 +28,8 @@ from config import (
     EXPORT_FOLDER,
     EXCEL_FILENAME,
     ALLOWED_EXTENSIONS,
+    SUPPORTED_MIME_TYPES,
+    MAX_UPLOAD_SIZE,
 )
 
 from ocr_engine import (
@@ -250,10 +253,14 @@ class UploadService:
             exist_ok=True,
         )
 
-        filepath = (
-            UPLOAD_FOLDER
-            / filename
-        )
+        # Never trust the client filename for the stored path.
+        # Preserve the original name in the database/response while
+        # using a UUID-backed filename to prevent collisions/overwrites.
+        stored_filename = f"{uuid.uuid4().hex}{Path(filename).suffix.lower()}"
+        filepath = UPLOAD_FOLDER / stored_filename
+
+        total_size = 0
+        chunk_size = 1024 * 1024
 
         try:
 
@@ -262,10 +269,24 @@ class UploadService:
                 "wb",
             ) as buffer:
 
-                shutil.copyfileobj(
-                    file.file,
-                    buffer,
-                )
+                while True:
+                    chunk = file.file.read(chunk_size)
+                    if not chunk:
+                        break
+
+                    total_size += len(chunk)
+                    if total_size > MAX_UPLOAD_SIZE:
+                        buffer.close()
+                        filepath.unlink(missing_ok=True)
+                        raise HTTPException(
+                            status_code=413,
+                            detail=(
+                                f"File too large. Maximum allowed size is "
+                                f"{MAX_UPLOAD_SIZE} bytes."
+                            ),
+                        )
+
+                    buffer.write(chunk)
 
         except OSError as exc:
 

@@ -8,6 +8,9 @@ Production Configuration-Driven Version
 
 from __future__ import annotations
 
+import os
+import time
+
 from contextlib import asynccontextmanager
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -17,16 +20,26 @@ from fastapi import (
     HTTPException,
     Request,
 )
+
 from fastapi.exceptions import RequestValidationError
+
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
     JSONResponse,
 )
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+
+# ==========================================================
+# CONFIGURATION
+# ==========================================================
 
 from config import (
     APP_NAME,
@@ -36,15 +49,45 @@ from config import (
     STATIC_FOLDER,
     TEMPLATE_FOLDER,
 )
+
+
+# ==========================================================
+# DATABASE
+# ==========================================================
+
 from database import (
     db_manager,
 )
+
+
+# ==========================================================
+# LOGGER
+# ==========================================================
+
 from logger import logger
+
+
+# ==========================================================
+# REPOSITORIES
+# ==========================================================
+
 from repositories.repositories.invoice_repository import (
     invoice_repository,
 )
+
+
+# ==========================================================
+# API ROUTERS
+# ==========================================================
+
 from api.upload import router as upload_router
 from api.invoice import router as invoice_router
+
+
+# ==========================================================
+# MODELS
+# ==========================================================
+
 from models.invoice_model import Invoice
 from models.user_model import User
 
@@ -53,9 +96,20 @@ from models.user_model import User
 # APPLICATION PATHS
 # ==========================================================
 
-STATIC_FOLDER.mkdir(parents=True, exist_ok=True)
-TEMPLATE_FOLDER.mkdir(parents=True, exist_ok=True)
-EXPORT_FOLDER.mkdir(parents=True, exist_ok=True)
+STATIC_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+TEMPLATE_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+EXPORT_FOLDER.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 
 # ==========================================================
@@ -75,24 +129,42 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
 
     try:
+
         db_manager.create_tables()
-        logger.info("Database initialization completed.")
-        logger.info("Application startup completed successfully.")
+
+        logger.info(
+            "Database initialization completed."
+        )
+
+        logger.info(
+            "Application startup completed successfully."
+        )
+
     except Exception:
-        logger.exception("Application startup failed.")
+
+        logger.exception(
+            "Application startup failed."
+        )
+
         raise
 
     yield
 
-    logger.info("AI Invoice Extractor shutting down.")
+    logger.info(
+        "AI Invoice Extractor shutting down."
+    )
 
     try:
+
         from database import close_database
 
         close_database()
 
     except Exception:
-        logger.exception("Database shutdown failed.")
+
+        logger.exception(
+            "Database shutdown failed."
+        )
 
 
 # ==========================================================
@@ -108,16 +180,76 @@ app = FastAPI(
 
 
 # ==========================================================
-# MIDDLEWARE
+# CORS CONFIGURATION
 # ==========================================================
+
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        (
+            "http://localhost:8000,"
+            "http://127.0.0.1:8000,"
+            "https://aiinvoiceextractor.live,"
+            "https://www.aiinvoiceextractor.live"
+        ),
+    ).split(",")
+    if origin.strip()
+]
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+
+    allow_origins=ALLOWED_ORIGINS,
+
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
+
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+    ],
 )
+
+
+# ==========================================================
+# TRUSTED HOST CONFIGURATION
+# ==========================================================
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        "ALLOWED_HOSTS",
+        (
+            "localhost,"
+            "127.0.0.1,"
+            "aiinvoiceextractor.live,"
+            "www.aiinvoiceextractor.live"
+        ),
+    ).split(",")
+    if host.strip()
+]
+
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=ALLOWED_HOSTS,
+)
+
+
+# ==========================================================
+# GZIP COMPRESSION
+# ==========================================================
 
 app.add_middleware(
     GZipMiddleware,
@@ -148,7 +280,7 @@ templates = Jinja2Templates(
 
 
 # ==========================================================
-# ROUTERS
+# API ROUTERS
 # ==========================================================
 
 app.include_router(
@@ -164,9 +296,12 @@ app.include_router(
 # DASHBOARD HELPERS
 # ==========================================================
 
-def _safe_decimal(value: Any) -> Decimal:
+def _safe_decimal(
+    value: Any,
+) -> Decimal:
     """
     Convert a numeric value safely to Decimal.
+
     Invalid or empty values become zero.
     """
 
@@ -177,14 +312,24 @@ def _safe_decimal(value: Any) -> Decimal:
         return value
 
     try:
-        text = str(value).strip().replace(",", "")
+
+        text = (
+            str(value)
+            .strip()
+            .replace(",", "")
+        )
 
         if not text:
             return Decimal("0")
 
         return Decimal(text)
 
-    except (InvalidOperation, ValueError, TypeError):
+    except (
+        InvalidOperation,
+        ValueError,
+        TypeError,
+    ):
+
         return Decimal("0")
 
 
@@ -195,14 +340,20 @@ def get_dashboard_data() -> dict[str, Any]:
     Database access remains behind InvoiceRepository.
     """
 
-    invoices = invoice_repository.get_all()
+    invoices = (
+        invoice_repository.get_all()
+    )
 
-    total_invoices = len(invoices)
+    total_invoices = len(
+        invoices
+    )
 
     total_amount = sum(
         (
             _safe_decimal(
-                invoice.get("grand_total")
+                invoice.get(
+                    "grand_total"
+                )
             )
             for invoice in invoices
         ),
@@ -211,6 +362,7 @@ def get_dashboard_data() -> dict[str, Any]:
 
     return {
         "total_invoices": total_invoices,
+
         "total_amount": float(
             total_amount
         ),
@@ -229,11 +381,13 @@ async def home(
     request: Request,
 ):
     """
-    Render the invoice upload page.
+    Main InvoiceAI application page.
+
+    Uses the new modern upload interface.
     """
 
     return templates.TemplateResponse(
-        "index.html",
+        "upload.html",
         {
             "request": request,
         },
@@ -255,13 +409,95 @@ async def dashboard(
     Render the dashboard page.
     """
 
-    dashboard_data = get_dashboard_data()
+    dashboard_data = (
+        get_dashboard_data()
+    )
 
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "dashboard": dashboard_data,
+        },
+    )
+
+
+# ==========================================================
+# MODERN FRONTEND PAGE ROUTES
+# ==========================================================
+
+@app.get(
+    "/upload-page",
+    response_class=HTMLResponse,
+)
+async def upload_page(
+    request: Request,
+):
+    """
+    Render the invoice processing page.
+    """
+
+    return templates.TemplateResponse(
+        "upload.html",
+        {
+            "request": request,
+        },
+    )
+
+
+@app.get(
+    "/history-page",
+    response_class=HTMLResponse,
+)
+async def history_page(
+    request: Request,
+):
+    """
+    Render the invoice history page.
+    """
+
+    return templates.TemplateResponse(
+        "history.html",
+        {
+            "request": request,
+        },
+    )
+
+
+@app.get(
+    "/reports",
+    response_class=HTMLResponse,
+)
+async def reports_page(
+    request: Request,
+):
+    """
+    Render the analytics page.
+    """
+
+    return templates.TemplateResponse(
+        "reports.html",
+        {
+            "request": request,
+        },
+    )
+
+
+@app.get(
+    "/settings",
+    response_class=HTMLResponse,
+)
+async def settings_page(
+    request: Request,
+):
+    """
+    Render the application settings page.
+    """
+
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
         },
     )
 
@@ -296,7 +532,9 @@ async def history_api() -> dict[str, Any]:
     Return invoice history as JSON.
     """
 
-    invoices = invoice_repository.get_all()
+    invoices = (
+        invoice_repository.get_all()
+    )
 
     return {
         "success": True,
@@ -316,7 +554,8 @@ async def history_compatibility() -> dict[str, Any]:
     """
     Backward-compatible history endpoint.
 
-    Existing frontend clients can continue using /history.
+    Existing frontend clients can continue
+    using /history.
     """
 
     return await history_api()
@@ -356,17 +595,23 @@ async def download_excel():
     )
 
     if not excel_path.exists():
+
         return JSONResponse(
             status_code=404,
+
             content={
                 "success": False,
-                "message": "Excel file not found.",
+                "message": (
+                    "Excel file not found."
+                ),
             },
         )
 
     return FileResponse(
         path=str(excel_path),
+
         filename=EXCEL_FILENAME,
+
         media_type=(
             "application/"
             "vnd.openxmlformats-officedocument."
@@ -374,6 +619,10 @@ async def download_excel():
         ),
     )
 
+
+# ==========================================================
+# BACKWARD-COMPATIBLE EXCEL DOWNLOAD
+# ==========================================================
 
 @app.get(
     "/download-excel"
@@ -387,7 +636,7 @@ async def download_excel_compatibility():
 
 
 # ==========================================================
-# SEARCH API COMPATIBILITY
+# SEARCH API
 # ==========================================================
 
 @app.get(
@@ -397,19 +646,24 @@ async def search_compatibility(
     keyword: str,
 ) -> dict[str, Any]:
     """
-    Backward-compatible invoice search endpoint.
+    Search invoices by keyword.
     """
 
     keyword = keyword.strip()
 
     if not keyword:
+
         raise HTTPException(
             status_code=400,
-            detail="Search keyword cannot be empty.",
+            detail=(
+                "Search keyword cannot be empty."
+            ),
         )
 
-    results = invoice_repository.search(
-        keyword
+    results = (
+        invoice_repository.search(
+            keyword
+        )
     )
 
     return {
@@ -421,7 +675,7 @@ async def search_compatibility(
 
 
 # ==========================================================
-# READY CHECK
+# READINESS CHECK
 # ==========================================================
 
 @app.get(
@@ -430,14 +684,19 @@ async def search_compatibility(
 async def readiness() -> JSONResponse:
     """
     Readiness endpoint for Docker/orchestrators.
+
+    Checks database connectivity.
     """
 
     try:
+
         from database import test_connection
 
         if not test_connection():
+
             return JSONResponse(
                 status_code=503,
+
                 content={
                     "ready": False,
                     "database": "unavailable",
@@ -446,6 +705,7 @@ async def readiness() -> JSONResponse:
 
         return JSONResponse(
             status_code=200,
+
             content={
                 "ready": True,
                 "database": "available",
@@ -453,12 +713,14 @@ async def readiness() -> JSONResponse:
         )
 
     except Exception:
+
         logger.exception(
             "Readiness check failed."
         )
 
         return JSONResponse(
             status_code=503,
+
             content={
                 "ready": False,
                 "database": "unavailable",
@@ -477,8 +739,8 @@ async def health() -> dict[str, Any]:
     """
     Liveness endpoint.
 
-    This endpoint intentionally does not fail if the
-    database is temporarily unavailable.
+    This endpoint intentionally does not fail
+    if the database is temporarily unavailable.
     """
 
     return {
@@ -501,11 +763,10 @@ async def log_requests(
     Central HTTP request logging.
     """
 
-    import time
-
     start_time = time.perf_counter()
 
     try:
+
         response = await call_next(
             request
         )
@@ -544,21 +805,82 @@ async def security_headers(
         request
     )
 
+    # Prevent MIME sniffing
     response.headers[
         "X-Content-Type-Options"
     ] = "nosniff"
 
+    # Prevent clickjacking
     response.headers[
         "X-Frame-Options"
     ] = "DENY"
 
+    # Referrer control
     response.headers[
         "Referrer-Policy"
-    ] = "strict-origin-when-cross-origin"
+    ] = (
+        "strict-origin-when-cross-origin"
+    )
 
+    # Browser permissions
     response.headers[
-        "X-XSS-Protection"
-    ] = "1; mode=block"
+        "Permissions-Policy"
+    ] = (
+        "camera=(), "
+        "microphone=(), "
+        "geolocation=(), "
+        "payment=()"
+    )
+
+    # Content Security Policy
+    response.headers[
+        "Content-Security-Policy"
+    ] = (
+        "default-src 'self'; "
+
+        "script-src "
+        "'self' "
+        "'unsafe-inline' "
+        "https://cdn.jsdelivr.net; "
+
+        "style-src "
+        "'self' "
+        "'unsafe-inline' "
+        "https://cdn.jsdelivr.net "
+        "https://fonts.googleapis.com; "
+
+        "font-src "
+        "'self' "
+        "https://fonts.gstatic.com "
+        "https://cdn.jsdelivr.net; "
+
+        "img-src "
+        "'self' "
+        "data: "
+        "blob:; "
+
+        "connect-src "
+        "'self'; "
+
+        "frame-ancestors "
+        "'none'; "
+
+        "base-uri "
+        "'self'; "
+
+        "form-action "
+        "'self';"
+    )
+
+    # HSTS only when HTTPS is actually being used
+    if request.url.scheme == "https":
+
+        response.headers[
+            "Strict-Transport-Security"
+        ] = (
+            "max-age=31536000; "
+            "includeSubDomains"
+        )
 
     return response
 
@@ -588,9 +910,12 @@ async def http_exception_handler(
 
     return JSONResponse(
         status_code=exc.status_code,
+
         content={
             "success": False,
-            "message": str(exc.detail),
+            "message": str(
+                exc.detail
+            ),
         },
     )
 
@@ -619,6 +944,7 @@ async def validation_exception_handler(
 
     return JSONResponse(
         status_code=422,
+
         content={
             "success": False,
             "message": "Validation failed.",
@@ -639,7 +965,8 @@ async def global_exception_handler(
     exc: Exception,
 ):
     """
-    Never expose internal exception details to clients.
+    Never expose internal exception details
+    to clients.
     """
 
     logger.exception(
@@ -650,6 +977,7 @@ async def global_exception_handler(
 
     return JSONResponse(
         status_code=500,
+
         content={
             "success": False,
             "message": "Internal Server Error",
@@ -662,13 +990,19 @@ async def global_exception_handler(
 # ==========================================================
 
 logger.info("=" * 60)
+
 logger.info(
     "%s %s ready.",
     APP_NAME,
     APP_VERSION,
 )
+
 logger.info("=" * 60)
 
+
+# ==========================================================
+# PUBLIC EXPORTS
+# ==========================================================
 
 __all__ = [
     "app",

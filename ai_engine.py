@@ -100,6 +100,11 @@ DEFAULT_RESULT: Dict[str, Any] = {
     "grand_total": "",
     "payment_method": "",
     "currency": "",
+
+    # Semantic document identifiers
+    "bill_number": "",
+    "bill_numbers": [],
+    "payment_reference": "",
 }
 
 # Keep ALL_FIELDS limited to extractable invoice fields so the
@@ -147,13 +152,22 @@ GST_PATTERN = re.compile(
     r"[A-Z0-9]$",
     re.IGNORECASE,
 )
-
 DATE_PATTERN = re.compile(
-    r"^\d{1,4}[-/.\s]"
-    r"\d{1,2}[-/.\s]"
-    r"\d{1,4}$"
+    r"^(?:"
+    r"\d{1,4}[-/.\s]\d{1,2}[-/.\s]\d{1,4}"
+    r"|"
+    r"\d{1,2}[-/.\s][A-Za-z]{3,9}[-/.\s]\d{2,4}"
+    r"|"
+    r"\d{1,2}[-/.\s]\d{1,2}[-/.\s][A-Za-z]{3,9}"
+    r"|"
+    r"[A-Za-z]{3,9}[-/.\s]\d{1,2}[-/.\s]\d{2,4}"
+    r"|"
+    r"\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}"
+    r"|"
+    r"[A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}"
+    r")$",
+    re.IGNORECASE,
 )
-
 
 # ==========================================================
 # SYSTEM PROMPT
@@ -223,7 +237,32 @@ vendor_name:
 - vendor, seller, supplier, merchant, company, issuer, sold by, billed by, from
 
 invoice_number:
-- invoice number/no/#, receipt number/no/#, bill number/no, transaction number, document number
+- explicit invoice number/no/#
+- explicit receipt number/no/# ONLY when the document is a receipt
+- Do NOT use Bill No as invoice_number when the document is a bill or payment document
+- Do NOT use UTR, cheque number, bank reference, payment reference, or transaction reference as invoice_number
+- If no explicit invoice/receipt number exists, return ""
+
+bill_number:
+- explicit bill number/no
+- only use when the OCR explicitly labels the identifier as Bill No / Bill Number
+- Do NOT map Bill No to invoice_number
+
+payment_reference:
+- UTR
+- UTR number
+- cheque number
+- cheque no
+- payment reference
+- bank reference
+- transaction reference
+- payment instrument/reference
+
+bill_numbers:
+- For payment_advice and payment_voucher documents, preserve EVERY explicitly listed BillNo
+- Return [] when no BillNo values are present
+- Never merge multiple BillNo values into invoice_number
+- Never invent BillNo values
 
 invoice_date:
 - invoice date, issue date, date, receipt date, transaction date, payment date, date paid
@@ -247,10 +286,30 @@ currency:
 Extract only explicitly supported currency codes/symbols such as INR, USD, EUR, GBP, CNY, JPY, AED, ₹, $, €, £. Do not guess currency from location.
 
 Special semantic mappings:
-- receipt number -> invoice_number
+- receipt number -> invoice_number ONLY for a receipt
+- bill number -> bill_number for a bill document
+- multiple BillNo values in payment_advice/payment_voucher -> bill_numbers
+- UTR/Cheque No -> payment_reference
 - date paid -> invoice_date
 - total -> grand_total
 - amount paid -> grand_total only when clearly the final amount paid for the document
+
+Payment-document rules:
+- payment_advice:
+  invoice_number must remain "" unless an explicit invoice/receipt number
+  belonging to the payment advice itself is present.
+  UTR/Cheque No belongs in payment_reference.
+  Every underlying BillNo belongs in bill_numbers.
+
+- payment_voucher:
+  invoice_number must remain "" unless explicitly labelled as an invoice
+  or receipt number.
+  UTR/Cheque/Cheque No belongs in payment_reference.
+  Every underlying BillNo belongs in bill_numbers.
+
+- payment_receipt:
+  A receipt number may be mapped to invoice_number.
+  Payment/bank/transaction references must remain payment_reference.
 
 ============================================================
 OUTPUT
@@ -273,7 +332,10 @@ Do not add fields outside this schema.
     "tax": "",
     "grand_total": "",
     "payment_method": "",
-    "currency": ""
+    "currency": "",
+    "bill_number": "",
+    "bill_numbers": [],
+    "payment_reference": ""
 }
 """
 
@@ -570,14 +632,48 @@ class AIEngine:
     }
 
     DOCUMENT_TYPE_PATTERNS = {
-        "tax_invoice": ["tax invoice"],
-        "credit_note": ["credit note"],
-        "debit_note": ["debit note"],
-        "receipt": ["receipt"],
-        "invoice": ["invoice"],
-        "bill": ["bill"],
-    }
+    "tax_invoice": [
+        "tax invoice",
+        "tax-invoice",
+    ],
 
+    "credit_note": [
+        "credit note",
+        "credit-note",
+    ],
+
+    "debit_note": [
+        "debit note",
+        "debit-note",
+    ],
+
+    "payment_advice": [
+        "payment advice",
+        "payment-advice",
+    ],
+
+    "payment_voucher": [
+        "payment voucher",
+        "payment-voucher",
+    ],
+
+    "payment_receipt": [
+        "payment receipt",
+        "payment-receipt",
+    ],
+
+    "receipt": [
+        "receipt",
+    ],
+
+    "invoice": [
+        "invoice",
+    ],
+
+    "bill": [
+        "bill",
+    ],
+}
     def verify_document_type(
         self,
         document_text: str,
@@ -1168,6 +1264,50 @@ class AIEngine:
 
 
     # ======================================================
+    # BILL NUMBER LIST NORMALIZATION
+    # ======================================================
+
+    def normalize_bill_numbers(
+        self,
+        value: Any,
+    ) -> list[str]:
+
+        if value is None:
+            return []
+
+        if isinstance(value, str):
+            value = value.strip()
+
+            if not value:
+                return []
+
+            return [value]
+
+        if not isinstance(value, list):
+            return []
+
+        result: list[str] = []
+
+        for item in value:
+
+            if item is None:
+                continue
+
+            item = str(item).strip()
+
+            if not item:
+                continue
+
+            if len(item) > MAX_FIELD_LENGTH:
+                item = item[:MAX_FIELD_LENGTH]
+
+            if item not in result:
+                result.append(item)
+
+        return result
+
+
+    # ======================================================
     # RESPONSE VALIDATION
     # ======================================================
 
@@ -1209,6 +1349,33 @@ class AIEngine:
             result[field] = self.normalize_value(
                 data.get(field, "")
             )
+
+        # Semantic identifier fields
+        result["bill_number"] = self.normalize_value(
+            data.get("bill_number", "")
+        )
+
+        result["payment_reference"] = self.normalize_value(
+            data.get("payment_reference", "")
+        )
+
+        result["bill_numbers"] = self.normalize_bill_numbers(
+            data.get("bill_numbers", [])
+        )
+
+        # Defensive semantic protection:
+        # Bill No must not silently become invoice_number.
+        if result["document_type"] in {
+            "bill",
+            "payment_advice",
+            "payment_voucher",
+        }:
+            explicit_invoice_number = (
+                data.get("invoice_number", "")
+            )
+
+            if not explicit_invoice_number:
+                result["invoice_number"] = ""
 
         return result
 
@@ -1397,7 +1564,7 @@ class AIEngine:
         )
 
 
-    # ======================================================
+        # ======================================================
     # REQUIRED FIELDS
     # ======================================================
 
@@ -1405,16 +1572,183 @@ class AIEngine:
         self,
         result: Dict[str, str],
     ) -> list[str]:
+        """
+        Determine missing required fields based on
+        the detected document type.
 
-        return [
-            field
-            for field in REQUIRED_FIELDS
-            if not result.get(
+        Different billing documents have different
+        mandatory fields.
+
+        Standard invoice/bill:
+            vendor_name
+            invoice_number
+            invoice_date
+            grand_total
+
+        Payment documents:
+            vendor_name
+            invoice_date
+            grand_total
+
+        Invoice number is NOT mandatory for payment advice,
+        payment voucher, or payment receipt because these
+        documents may contain multiple BillNo/UTR/Cheque
+        references rather than one invoice number.
+        """
+
+        document_type = (
+            str(
+                result.get(
+                    "document_type",
+                    "",
+                )
+            )
+            .strip()
+            .lower()
+        )
+
+        # --------------------------------------------------
+        # Document-type-specific required fields
+        # --------------------------------------------------
+
+        required_by_type = {
+
+            # ----------------------------------------------
+            # Standard invoice documents
+            # ----------------------------------------------
+            "invoice": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            "tax_invoice": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            "sales_invoice": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            "purchase_invoice": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            # ----------------------------------------------
+            # Bills
+            # ----------------------------------------------
+            "bill": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            # ----------------------------------------------
+            # Receipts
+            # ----------------------------------------------
+         "receipt": [
+    "vendor_name",
+    "invoice_date",
+    "grand_total",
+],
+
+            # ----------------------------------------------
+            # Payment documents
+            #
+            # invoice_number is intentionally NOT required.
+            # These documents can contain multiple BillNo
+            # values or only UTR/Cheque references.
+            # ----------------------------------------------
+            "payment_advice": [
+                "vendor_name",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            "payment_voucher": [
+                "vendor_name",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            "payment_receipt": [
+                "vendor_name",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            # ----------------------------------------------
+            # Credit / debit notes
+            # ----------------------------------------------
+            "credit_note": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+
+            "debit_note": [
+                "vendor_name",
+                "invoice_number",
+                "invoice_date",
+                "grand_total",
+            ],
+        }
+
+        # --------------------------------------------------
+        # Fallback
+        # --------------------------------------------------
+        #
+        # If AI returns an unknown document type, preserve
+        # the existing global REQUIRED_FIELDS behavior.
+        # --------------------------------------------------
+
+        required_fields = required_by_type.get(
+            document_type,
+            REQUIRED_FIELDS,
+        )
+
+        # --------------------------------------------------
+        # Find missing fields
+        # --------------------------------------------------
+
+        missing_fields: list[str] = []
+
+        for field in required_fields:
+
+            value = result.get(
                 field,
                 "",
-            ).strip()
-        ]
+            )
 
+            if value is None:
+                value = ""
+
+            if not str(value).strip():
+                missing_fields.append(
+                    field
+                )
+
+        logger.info(
+            "Required field validation | "
+            "document_type=%s | required=%s | missing=%s",
+            document_type,
+            required_fields,
+            missing_fields,
+        )
+
+        return missing_fields
 
     # ======================================================
     # STATUS
@@ -1558,6 +1892,18 @@ class AIEngine:
                 result["confidence"] = confidence
                 result["field_confidence"] = field_confidence
                 result["status"] = status
+
+                logger.info(
+                    "Semantic identifiers | "
+                    "invoice_number=%s | "
+                    "bill_number=%s | "
+                    "bill_count=%d | "
+                    "payment_reference=%s",
+                    result.get("invoice_number", ""),
+                    result.get("bill_number", ""),
+                    len(result.get("bill_numbers", [])),
+                    result.get("payment_reference", ""),
+                )
                 result["processing_time"] = round(processing_time, 2)
                 result["model_version"] = self.model_name
                 result["provider"] = self.provider

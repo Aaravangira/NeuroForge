@@ -1,298 +1,57 @@
 {% extends "base.html" %}
-
-{% block title %}Dashboard{% endblock %}
-
-{% block page_title %}
-Dashboard
-{% endblock %}
-
+{% block title %}Dashboard · InvoiceAI{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 {% block content %}
-
-<div class="container-fluid">
-
-    <!-- Statistics -->
-
-    <div class="row g-4">
-
-        <div class="col-xl-3 col-md-6">
-
-            <div class="stat-card">
-
-                <div class="stat-icon bg-primary">
-
-                    <i class="bi bi-file-earmark-text"></i>
-
-                </div>
-
-                <div>
-
-                    <p class="stat-title">
-
-                        Total Invoices
-
-                    </p>
-
-                    <h2 id="invoiceCount">
-
-                        0
-
-                    </h2>
-
-                </div>
-
-            </div>
-
+<div class="dashboard-page">
+    <section class="welcome-row">
+        <div>
+            <div class="welcome-kicker"><span class="live-dot"></span> AI-powered workspace</div>
+            <h2>Good to see you again.</h2>
+            <p>Turn invoices into clean, structured data with intelligent extraction.</p>
         </div>
+        <a href="/upload-page" class="primary-action"><i class="bi bi-stars"></i> Process an invoice <i class="bi bi-arrow-up-right"></i></a>
+    </section>
 
-        <div class="col-xl-3 col-md-6">
+    <section class="stat-grid">
+        <article class="stat-card modern-stat">
+            <div class="stat-top"><span class="stat-label">Total invoices</span><div class="stat-icon icon-blue"><i class="bi bi-receipt-cutoff"></i></div></div>
+            <div class="stat-value" id="invoiceCount">0</div><div class="stat-foot"><span class="trend neutral"><i class="bi bi-database"></i> All processed documents</span></div>
+        </article>
+        <article class="stat-card modern-stat">
+            <div class="stat-top"><span class="stat-label">Total value</span><div class="stat-icon icon-green"><i class="bi bi-currency-rupee"></i></div></div>
+            <div class="stat-value" id="totalAmount">₹0</div><div class="stat-foot"><span class="trend positive"><i class="bi bi-arrow-up-right"></i> Invoice value</span></div>
+        </article>
+        <article class="stat-card modern-stat">
+            <div class="stat-top"><span class="stat-label">Avg. processing</span><div class="stat-icon icon-purple"><i class="bi bi-lightning-charge"></i></div></div>
+            <div class="stat-value">2.3<span class="stat-unit">s</span></div><div class="stat-foot"><span class="trend positive"><i class="bi bi-lightning-fill"></i> Fast extraction</span></div>
+        </article>
+        <article class="stat-card modern-stat">
+            <div class="stat-top"><span class="stat-label">AI accuracy</span><div class="stat-icon icon-amber"><i class="bi bi-patch-check"></i></div></div>
+            <div class="stat-value">98<span class="stat-unit">%</span></div><div class="stat-foot"><span class="trend positive"><i class="bi bi-check-circle"></i> High confidence</span></div>
+        </article>
+    </section>
 
-            <div class="stat-card">
-
-                <div class="stat-icon bg-success">
-
-                    <i class="bi bi-currency-rupee"></i>
-
-                </div>
-
-                <div>
-
-                    <p class="stat-title">
-
-                        Total Amount
-
-                    </p>
-
-                    <h2 id="totalAmount">
-
-                        ₹0
-
-                    </h2>
-
-                </div>
-
+    <section class="dashboard-grid">
+        <article class="surface-card analytics-card">
+            <div class="card-heading"><div><span class="section-kicker">OVERVIEW</span><h3>Invoice activity</h3></div><a href="/reports" class="text-action">View analytics <i class="bi bi-arrow-right"></i></a></div>
+            <div class="chart-placeholder">
+                <div class="chart-grid-lines"><span></span><span></span><span></span><span></span></div>
+                <div class="chart-empty"><div class="chart-icon"><i class="bi bi-bar-chart-line"></i></div><strong>Your invoice analytics will appear here</strong><span>Process your first invoices to start seeing activity.</span><a href="/upload-page">Process an invoice <i class="bi bi-arrow-right"></i></a></div>
             </div>
-
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-
-            <div class="stat-card">
-
-                <div class="stat-icon bg-warning">
-
-                    <i class="bi bi-lightning-charge"></i>
-
-                </div>
-
-                <div>
-
-                    <p class="stat-title">
-
-                        Avg Processing
-
-                    </p>
-
-                    <h2>
-
-                        2.3s
-
-                    </h2>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-
-            <div class="stat-card">
-
-                <div class="stat-icon bg-info">
-
-                    <i class="bi bi-patch-check"></i>
-
-                </div>
-
-                <div>
-
-                    <p class="stat-title">
-
-                        AI Accuracy
-
-                    </p>
-
-                    <h2>
-
-                        98%
-
-                    </h2>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Second Row -->
-
-    <div class="row mt-4">
-
-        <!-- Chart -->
-
-        <div class="col-lg-8">
-
-            <div class="dashboard-card">
-
-                <div class="d-flex justify-content-between align-items-center mb-4">
-
-                    <h5>
-
-                        Invoice Analytics
-
-                    </h5>
-
-                    <button class="btn btn-outline-primary">
-
-                        View Report
-
-                    </button>
-
-                </div>
-
-                <div id="chartArea">
-
-                    <div class="empty-placeholder">
-
-                        Chart will be added in next phase
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- Quick Actions -->
-
-        <div class="col-lg-4">
-
-            <div class="dashboard-card">
-
-                <h5 class="mb-4">
-
-                    Quick Actions
-
-                </h5>
-
-                <a href="/upload-page"
-
-                   class="btn btn-primary w-100 mb-3">
-
-                    <i class="bi bi-upload me-2"></i>
-
-                    Upload Invoice
-
-                </a>
-
-                <a href="/history-page"
-
-                   class="btn btn-light w-100 mb-3">
-
-                    <i class="bi bi-clock-history me-2"></i>
-
-                    Invoice History
-
-                </a>
-
-                <a href="/reports"
-
-                   class="btn btn-light w-100">
-
-                    <i class="bi bi-bar-chart me-2"></i>
-
-                    Reports
-
-                </a>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Recent Activity -->
-
-    <div class="row mt-4">
-
-        <div class="col-12">
-
-            <div class="dashboard-card">
-
-                <div class="d-flex justify-content-between align-items-center">
-
-                    <h5>
-
-                        Recent Activity
-
-                    </h5>
-
-                    <button class="btn btn-sm btn-outline-primary">
-
-                        Refresh
-
-                    </button>
-
-                </div>
-
-                <hr>
-
-                <table class="table modern-table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>Vendor</th>
-
-                            <th>Invoice</th>
-
-                            <th>Date</th>
-
-                            <th>Amount</th>
-
-                            <th>Status</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        <tr>
-
-                            <td colspan="5"
-                                class="text-center text-muted">
-
-                                No invoices yet
-
-                            </td>
-
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    </div>
-
+        </article>
+
+        <article class="surface-card quick-card">
+            <div class="card-heading"><div><span class="section-kicker">SHORTCUTS</span><h3>Quick actions</h3></div></div>
+            <a class="quick-action primary" href="/upload-page"><span class="quick-icon"><i class="bi bi-stars"></i></span><span><strong>Extract invoice</strong><small>Upload & analyze with AI</small></span><i class="bi bi-arrow-up-right arrow"></i></a>
+            <a class="quick-action" href="/history-page"><span class="quick-icon"><i class="bi bi-receipt"></i></span><span><strong>Browse invoices</strong><small>Search your processed data</small></span><i class="bi bi-arrow-right arrow"></i></a>
+            <a class="quick-action" href="/reports"><span class="quick-icon"><i class="bi bi-graph-up-arrow"></i></span><span><strong>Open analytics</strong><small>Review invoice insights</small></span><i class="bi bi-arrow-right arrow"></i></a>
+        </article>
+    </section>
+
+    <section class="surface-card recent-card">
+        <div class="card-heading recent-heading"><div><span class="section-kicker">LATEST</span><h3>Recent invoices</h3></div><div class="heading-actions"><button class="icon-button small" id="refreshDashboard" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button><a href="/history-page" class="text-action">View all <i class="bi bi-arrow-right"></i></a></div></div>
+        <div class="table-wrap"><table class="modern-table"><thead><tr><th>Vendor</th><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead><tbody id="recentInvoices"><tr><td colspan="5"><div class="table-empty"><div class="empty-mini-icon"><i class="bi bi-inbox"></i></div><strong>No invoices yet</strong><span>Processed invoices will appear here.</span></div></td></tr></tbody></table></div>
+    </section>
 </div>
-
 {% endblock %}
+{% block scripts %}<script src="/static/dashboard.js"></script>{% endblock %}

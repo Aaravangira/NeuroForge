@@ -1,171 +1,318 @@
 {% extends "base.html" %}
 
-{% block title %}
-
-Upload Invoice
-
-{% endblock %}
-
-{% block page_title %}
-
-AI Invoice Extraction
-
-{% endblock %}
+{% block title %}Process Invoice · InvoiceAI{% endblock %}
+{% block page_title %}Process Invoice{% endblock %}
 
 {% block content %}
 
-<div class="container-fluid">
+<div class="dashboard-page">
 
-    <div class="row">
+    <!-- Header -->
+    <section class="welcome-row">
+        <div>
+            <div class="welcome-kicker">
+                <span class="live-dot"></span>
+                AI-powered extraction
+            </div>
 
-        <!-- Upload -->
+            <h2>Process an invoice.</h2>
 
-        <div class="col-lg-4">
+            <p>
+                Upload an invoice and let InvoiceAI extract structured data
+                automatically.
+            </p>
+        </div>
+    </section>
 
-            <div class="dashboard-card">
 
-                <h5 class="mb-4">
+    <!-- Upload Area -->
+    <section class="surface-card upload-page-card">
 
-                    Upload Invoice
+        <div class="upload-card-header">
+            <div>
+                <span class="section-kicker">DOCUMENT INPUT</span>
 
-                </h5>
+                <h3>Upload your invoice</h3>
 
-                <form id="uploadForm">
+                <p>
+                    Supported formats: PDF, PNG, JPG, JPEG
+                </p>
+            </div>
 
-                    <div class="upload-box">
+            <div class="upload-header-icon">
+                <i class="bi bi-file-earmark-arrow-up"></i>
+            </div>
+        </div>
 
-                        <i class="bi bi-cloud-arrow-up upload-icon"></i>
 
-                        <h4>
+        <!-- Drop Zone -->
+        <div class="invoice-dropzone" id="invoiceDropzone">
 
-                            Drag & Drop
+            <div class="dropzone-icon">
+                <i class="bi bi-cloud-arrow-up"></i>
+            </div>
 
-                        </h4>
+            <h4>Drag & drop your invoice here</h4>
 
-                        <p>
+            <p>
+                or choose a file from your computer
+            </p>
 
-                            or Browse Invoice
+            <label for="invoiceFile" class="primary-action upload-select-button">
+                <i class="bi bi-folder2-open"></i>
+                Choose invoice
+            </label>
 
-                        </p>
+            <input
+                type="file"
+                id="invoiceFile"
+                name="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                hidden
+            >
 
-                        <input
-
-                            id="file"
-
-                            type="file"
-
-                            class="form-control"
-
-                            accept=".pdf,.png,.jpg,.jpeg"
-
-                            required>
-
-                        <button
-
-                            class="btn btn-primary w-100 mt-4"
-
-                            type="submit">
-
-                            <i class="bi bi-stars"></i>
-
-                            Extract Invoice
-
-                        </button>
-
-                    </div>
-
-                </form>
-
-                <div
-
-                    id="loading"
-
-                    class="mt-4"
-
-                    style="display:none;">
-
-                    <div class="text-center">
-
-                        <div class="spinner-border text-primary"></div>
-
-                        <h6 class="mt-3">
-
-                            AI is extracting invoice...
-
-                        </h6>
-
-                    </div>
-
-                </div>
-
+            <div class="upload-limit">
+                <i class="bi bi-shield-check"></i>
+                Your document is processed securely
             </div>
 
         </div>
 
-        <!-- Preview -->
 
-        <div class="col-lg-8">
+        <!-- Selected File -->
+        <div class="selected-file" id="selectedFile" style="display:none;">
 
-            <div class="dashboard-card">
-
-                <div class="d-flex justify-content-between">
-
-                    <h5>
-
-                        Invoice Preview
-
-                    </h5>
-
-                    <a
-
-                        href="/download-excel"
-
-                        class="btn btn-success">
-
-                        <i class="bi bi-file-earmark-excel"></i>
-
-                        Excel
-
-                    </a>
-
-                </div>
-
-                <hr>
-
-                <div id="result">
-
-                    <div class="empty-state">
-
-                        <i class="bi bi-file-earmark-text"></i>
-
-                        <h4>
-
-                            No Invoice Uploaded
-
-                        </h4>
-
-                        <p>
-
-                            Upload an invoice to begin AI extraction.
-
-                        </p>
-
-                    </div>
-
-                </div>
-
+            <div class="selected-file-icon">
+                <i class="bi bi-file-earmark-text"></i>
             </div>
+
+            <div class="selected-file-info">
+                <strong id="selectedFileName">invoice.pdf</strong>
+                <span id="selectedFileSize">0 KB</span>
+            </div>
+
+            <button
+                type="button"
+                class="icon-button"
+                id="removeSelectedFile"
+                title="Remove file"
+            >
+                <i class="bi bi-x-lg"></i>
+            </button>
 
         </div>
 
-    </div>
+
+        <!-- Process Button -->
+        <div class="process-action">
+
+            <button
+                type="button"
+                class="btn-primary process-invoice-btn"
+                id="processInvoice"
+                disabled
+            >
+                <i class="bi bi-stars"></i>
+                Process invoice with AI
+            </button>
+
+        </div>
+
+
+        <!-- Loading -->
+        <div id="loading" class="processing-state" style="display:none;">
+
+            <div class="processing-spinner">
+                <div class="spinner-ring"></div>
+            </div>
+
+            <strong>Analyzing your invoice...</strong>
+
+            <span>
+                OCR and AI extraction are processing your document.
+            </span>
+
+        </div>
+
+
+        <!-- Result -->
+        <div id="result"></div>
+
+    </section>
+
+
+    <!-- Information Cards -->
+    <section class="upload-info-grid">
+
+        <article class="surface-card upload-info-card">
+
+            <div class="info-icon blue">
+                <i class="bi bi-eye"></i>
+            </div>
+
+            <div>
+                <strong>OCR extraction</strong>
+
+                <p>
+                    Text and invoice information are automatically detected
+                    from your document.
+                </p>
+            </div>
+
+        </article>
+
+
+        <article class="surface-card upload-info-card">
+
+            <div class="info-icon purple">
+                <i class="bi bi-stars"></i>
+            </div>
+
+            <div>
+                <strong>AI understanding</strong>
+
+                <p>
+                    Intelligent models identify vendors, totals, dates,
+                    taxes and invoice fields.
+                </p>
+            </div>
+
+        </article>
+
+
+        <article class="surface-card upload-info-card">
+
+            <div class="info-icon green">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+            </div>
+
+            <div>
+                <strong>Structured output</strong>
+
+                <p>
+                    Extracted information is stored and ready for reporting
+                    and Excel export.
+                </p>
+            </div>
+
+        </article>
+
+    </section>
 
 </div>
 
 {% endblock %}
 
+
 {% block scripts %}
 
 <script src="/static/app.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const fileInput = document.getElementById("invoiceFile");
+    const dropzone = document.getElementById("invoiceDropzone");
+    const selectedFile = document.getElementById("selectedFile");
+    const fileName = document.getElementById("selectedFileName");
+    const fileSize = document.getElementById("selectedFileSize");
+    const removeButton = document.getElementById("removeSelectedFile");
+    const processButton = document.getElementById("processInvoice");
+
+    if (!fileInput) return;
+
+    function showFile(file) {
+
+        if (!file) return;
+
+        fileName.textContent = file.name;
+
+        const sizeKB = file.size / 1024;
+
+        if (sizeKB < 1024) {
+            fileSize.textContent = sizeKB.toFixed(1) + " KB";
+        } else {
+            fileSize.textContent =
+                (sizeKB / 1024).toFixed(2) + " MB";
+        }
+
+        selectedFile.style.display = "flex";
+
+        processButton.disabled = false;
+
+        dropzone.classList.add("has-file");
+    }
+
+
+    fileInput.addEventListener("change", function () {
+
+        if (this.files && this.files.length > 0) {
+            showFile(this.files[0]);
+        }
+
+    });
+
+
+    removeButton.addEventListener("click", function () {
+
+        fileInput.value = "";
+
+        selectedFile.style.display = "none";
+
+        processButton.disabled = true;
+
+        dropzone.classList.remove("has-file");
+
+    });
+
+
+    [
+        "dragenter",
+        "dragover"
+    ].forEach(eventName => {
+
+        dropzone.addEventListener(eventName, function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            dropzone.classList.add("drag-active");
+
+        });
+
+    });
+
+
+    [
+        "dragleave",
+        "drop"
+    ].forEach(eventName => {
+
+        dropzone.addEventListener(eventName, function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            dropzone.classList.remove("drag-active");
+
+        });
+
+    });
+
+
+    dropzone.addEventListener("drop", function (event) {
+
+        const files = event.dataTransfer.files;
+
+        if (!files || files.length === 0) return;
+
+        fileInput.files = files;
+
+        showFile(files[0]);
+
+    });
+
+});
+</script>
 
 {% endblock %}
